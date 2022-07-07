@@ -10,13 +10,13 @@ from sklearn.feature_extraction.text import CountVectorizer #Bags of word vector
 from sklearn.utils import shuffle #shuffle dataset
 from sklearn.naive_bayes import MultinomialNB 
 
-
+import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn import metrics #Import scikit-learn metrics module for accuracy calculation
-
+from sklearn import metrics  #Import scikit-learn metrics module for accuracy calculation
+import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from imblearn.over_sampling import SMOTE 
+# from imblearn.over_sampling import SMOTE 
 
 # Class
 
@@ -24,6 +24,7 @@ class TrainerEngine:
     def trainData(self, dataFrame = None):
         df = pd.read_csv(
             'https://raw.githubusercontent.com/manitouphon/huff-post-csv-news-category-dataset/main/simplified_data.csv',
+            # './datasets/main.csv',
             sep=',',
             usecols=["category", "headline"],
             )
@@ -37,6 +38,7 @@ class TrainerEngine:
         ## Testing Data
             target_df = pd.read_csv(
                 'https://raw.githubusercontent.com/manitouphon/FaceMine-backend/main/PPPostFBScrape.csv',
+                # './datasets/target.csv',
                 sep=',',
                 usecols=["TITLE"],
                 )
@@ -81,14 +83,29 @@ class TrainerEngine:
             x_train, x_test, y_train, y_test = train_test_split(x,y, test_size=0.3 , random_state=10)
             nb_model.fit(x_train,y_train)
             y_predict = nb_model.predict(x_test)
+
+
+            category_counts = df["category"].value_counts()
             acc = metrics.accuracy_score(y_test, y_predict)
-            metric = metrics.confusion_matrix(y_test, y_predict )
+            con_matrix = metrics.confusion_matrix(y_test, y_predict,labels=category_counts.index )
             f1 = metrics.f1_score(y_test, y_predict, average=None)
-            # f1_avg = metrics.f1_score(y_test, y_predict)
-            print("Total Numbers of Categories: ", df["category"].nunique(),"\n", df["category"].value_counts())
-            print("F1 Score:", f1  ,"Acc",acc, "\n",metric)
+            
+            print("Total Numbers of Categories: ", df["category"].nunique(),"\n", category_counts)
+            print("F1 Score:", f1  ,"Acc",acc, "\n",con_matrix)
+            print(metrics.classification_report(y_test, y_predict))
+
+            #plot the matrix to a png (UNSTABLE! If segmentation fault happens, run it again)
+            con_matrix_df = pd.DataFrame(con_matrix, 
+                        index=category_counts.index, 
+                        columns=category_counts.index)
+            con_matrix_df = con_matrix_df.div(con_matrix_df.sum(axis=1), axis=0)
+            sns.heatmap(con_matrix_df, 
+                        cmap="RdYlGn", )
+            
+            plt.savefig("con_mat.png",bbox_inches="tight",figsize=(100,80))
 
             nb_model.fit(x_train,y_train)
+            
             
             loaded_model = nb_model
             # Dump Model to a file after training 
